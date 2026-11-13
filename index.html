@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>予約ノート（個）</title>
-<meta name="theme-color" content="#E9EEEC" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#121819" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F3D6D1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#3A1714" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -552,6 +552,9 @@ nav.tabs button[aria-current="page"]{color:var(--ink);font-weight:700}
 #gate p{font-size:14px;color:var(--sub);margin:0 0 18px}
 #gate input{text-align:center;letter-spacing:.12em;font-size:20px;text-transform:uppercase}
 #gate .err{color:var(--danger);font-size:13px;min-height:20px;margin-top:8px}
+header.top{border-top:6px solid #C0392B}
+.ko-tag{font-size:12px;font-weight:700;color:#C0392B;margin:0 0 2px;display:flex;align-items:center;gap:6px}
+.ko-badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#C0392B;color:#fff;font-size:12px}
 </style>
 </head>
 <body>
@@ -570,6 +573,7 @@ nav.tabs button[aria-current="page"]{color:var(--ink);font-weight:700}
   <header class="top">
     <div class="top-row">
       <div>
+        <div class="ko-tag"><span class="ko-badge">個</span>予約ノート（個）</div>
         <div class="today-label" id="todayLabel">今日の売上</div>
         <div class="today-amt num" id="todayAmt">¥0</div>
         <div class="today-meta num" id="todayMeta">0件</div>
