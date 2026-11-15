@@ -131,6 +131,7 @@ table.ytab td:last-child{font-weight:700;color:var(--ok)}table.ytab tr.none td{c
 .yt-det.yr-det2 summary::after{content:"車などを追加する ▾"}.yt-det.yr-det2[open] summary::after{content:"閉じる ▴"}
 .btn.danger{color:#C0392B}
 .paste-btn{font-size:18px;padding:16px 0}
+.ocr-help{border:0;background:none;color:var(--shimei);font-weight:700;font-size:14px;padding:6px 0 0;text-decoration:underline;text-underline-offset:3px}
 .ocr-btn{width:100%;margin-top:12px;padding:12px 0;font-weight:700}
 .paste-det{margin-top:8px}.paste-det summary{font-size:13px;color:var(--sub);cursor:pointer}.paste-det textarea{margin-top:6px}
 #pasteSum{margin-top:10px;border:2px solid var(--ok);border-radius:14px;padding:8px 12px 10px;scroll-margin-bottom:84px}
@@ -600,7 +601,8 @@ header.top{border-top:6px solid #C0392B}
       <p class="note" style="margin:6px 0 0">りらくるアプリで予約通知をコピーしてから押してください。</p>
       <button type="button" class="btn ghost ocr-btn" id="ocrBtn">📷 予約画面のスクショから読み取る</button>
       <input type="file" id="ocrFile" accept="image/*" multiple hidden>
-      <p class="note" style="margin:4px 0 0">りらくるアプリで「ご予約内容」を開いてスクショし、ここで選んでください（何枚でもまとめて選べます）。スクショの「共有」から「予約ノート」を選んでも読み取れます。予約一覧（時間の表）のスクショも一緒に選ぶと、お客様マークの色（青・赤）から性別も入ります。</p>
+      <p class="note" style="margin:4px 0 0">りらくるアプリで「ご予約内容」を開いてスクショし、ここで選んでください（何枚でもまとめて選べます）。スクショの「共有」から「予約ノート（個）」を選んでも読み取れます。予約一覧（時間の表）のスクショも一緒に選ぶと、お客様マークの色（青・赤）から性別も入ります。</p>
+      <button type="button" class="ocr-help" id="ocrHelp">？ スクショ読み取りのくわしい使い方</button>
       <div class="warn" id="pasteMsg"></div>
       <div id="pasteSum" hidden></div>
       <details class="paste-det" id="pasteDet"><summary>うまく貼り付けられないとき</summary>
@@ -756,6 +758,35 @@ header.top{border-top:6px solid #C0392B}
       <li>記録を直すときは、一覧などから記録を開いて「編集する」。削除は2回押すと消えます。</li>
       <li><b>別のお客様に付け替える</b>：同じ番号の別のお客様を選んでしまったときは、記録を開いて「編集する」→ 会員番号の下の「選び直す」→ 正しいお客様の「このお客様を選ぶ」（まだ登録していない人なら「同じ番号の別のお客様（新しく登録）」）→「変更を保存」。来店回数や累計も数え直されます。</li>
       <li>キャンセルになった予約は、記録を開いて「この予約をキャンセルにする」。売上・件数・施術時間・収入には入りません。</li>
+    </ul>
+  </details>
+  <details class="card" id="helpOcr"><summary>📷 スクショから読み取る</summary>
+    <p><b>① スクショの撮り方</b></p>
+    <ul>
+      <li>りらくるアプリで予約を押して「ご予約内容」を開き、スクショを撮ります。<b>会員番号からコメントまでが1枚に全部入る</b>ようにしてください（切れた部分は読み取れません）。</li>
+      <li>性別も自動で入れたいときは、その日の<b>予約一覧（時間の表）</b>のスクショも撮ります。左側の時刻（9:00、9:30…）が3つ以上写るようにしてください。お客様マークの色（水色＝男性、赤＝女性）から性別を入れます。</li>
+      <li>何件分か続けて撮っておいて、あとでまとめて読み取れます。</li>
+    </ul>
+    <p><b>② 読み取り方</b></p>
+    <ul>
+      <li>入力タブの「📷 予約画面のスクショから読み取る」を押して、スクショを選びます。<b>何枚でもまとめて選べます</b>（1枚目を長押しすると、続けて選べます）。予約一覧のスクショも一緒に選んでください。</li>
+      <li><b>Android</b>：スクショを撮った直後に出る「共有」から「予約ノート（個）」を選んでも読み取れます（共有先に出てくるまで、アプリの更新から少し時間がかかることがあります）。<b>iPhone</b>：共有からは選べないので、ボタンから選んでください。</li>
+      <li>読み取った予約は、<b>予約時間の早い順</b>に1件ずつ確認画面に出ます。内容を確かめて「この内容で保存」を押すと、次の予約に進みます。</li>
+      <li>最初の1件では予約の日付を聞かれます。同じときに選んだ残りの予約にも、同じ日付が入ります。</li>
+      <li>読み間違いがあるときは「<b>下で直す</b>」で入力欄を直してから保存します。その予約を入れないときは「<b>やめる</b>」で飛ばせます。</li>
+    </ul>
+    <p><b>③ 知っておくこと</b></p>
+    <ul>
+      <li>はじめて使うときだけ、読み取りの準備に<b>約6MBの通信</b>が必要です（Wi-Fiがおすすめ）。2回目からは通信なしでも読み取れます。</li>
+      <li>読み取りは<b>スマホの中だけ</b>で行います。画像はどこにも送りません。</li>
+      <li>保存したあとのスクショは、いつ消しても大丈夫です。写真が増えるので、こまめに消すのがおすすめです。</li>
+    </ul>
+    <p><b>うまく読み取れないとき</b></p>
+    <ul>
+      <li>画面が切れている、ほかの画面が重なっているときは読み間違えやすくなります。撮り直してください。</li>
+      <li>指名の種類・性別・日付が違うときは、確認画面か「下で直す」で直してください。</li>
+      <li>「スクショを読み取れませんでした」と出たら、ネットにつながる所でもう一度試してください。</li>
+      <li>それでもうまくいかないときは、これまでどおり「📋 予約通知を貼り付け」か、手で入力してください。</li>
     </ul>
   </details>
   <details class="card"><summary>一覧タブ</summary>
@@ -1275,11 +1306,12 @@ $("gearBtn").addEventListener("click",()=>show("settings"));
 $("setBack").addEventListener("click",()=>show("input"));
 /* ---------- 使い方・更新のお知らせ ---------- */
 // 更新したら、いちばん上に新しい版を足して APP_VER も同じ数字にする（sw.js の VERSION とそろえる）
-const APP_VER=95; // 更新履歴に新しい項目を足さないときは、お知らせは出ない
+const APP_VER=96; // 更新履歴に新しい項目を足さないときは、お知らせは出ない
 const CHANGELOG=[
+  {n:96,date:"11月15日",items:["⚙設定の「使い方」に「📷 スクショから読み取る」の説明を追加しました（スクショの撮り方・読み取り方・うまく読み取れないとき）。","入力タブのスクショ読み取りボタンの下にある「？ スクショ読み取りのくわしい使い方」からも、同じ説明を開けます。"]},
   {n:95,date:"11月14日",items:["「その他（練習など）」の記録にも料金を入れられるようになりました。売上・収入には入れず、集計タブの「その他の金額（別集計）」に分けて表示します。"]},
   {n:94,date:"11月14日",items:["スクショをまとめて読み取ったとき、撮った順ではなく予約時間の早い順に出てくるようにしました。","予約一覧（時間の表）のスクショも一緒に選ぶか共有すると、お客様マークの色（青＝男性・赤＝女性）から性別が自動で入ります。日付と性別が分かっているときは、質問の画面を出さずにすぐ確認画面になります。"]},
-  {n:93,date:"11月14日",items:["りらくるアプリの「ご予約内容」のスクショから予約を読み取れるようになりました。入力タブの「📷 予約画面のスクショから読み取る」から、スクショを何枚でもまとめて選べます。1件保存すると、次のスクショを読み取ります。","スクショを撮ったあと、Androidの「共有」から「予約ノート」を選んでも読み取れます（共有先に出てくるまで、アプリの更新から少し時間がかかることがあります）。","はじめて使うときだけ、読み取りの準備にネット通信（約6MB）が必要です。"]},
+  {n:93,date:"11月14日",items:["りらくるアプリの「ご予約内容」のスクショから予約を読み取れるようになりました。入力タブの「📷 予約画面のスクショから読み取る」から、スクショを何枚でもまとめて選べます。1件保存すると、次のスクショを読み取ります。","スクショを撮ったあと、Androidの「共有」から「予約ノート（個）」を選んでも読み取れます（共有先に出てくるまで、アプリの更新から少し時間がかかることがあります）。","はじめて使うときだけ、読み取りの準備にネット通信（約6MB）が必要です。"]},
   {n:92,date:"11月13日",items:["入店時間を30分単位で入れられるようになりました（りらくるの30分単位エントリーに合わせました）。これまでに入れた入店時間はそのままです。"]},
   {n:91,date:"11月13日",items:["時間タブの日・週・月に稼働率（施術時間÷入店時間）を表示するようにしました。","今週・今月の稼働率と集計タブの稼働率は、今日までの入店時間で計算します（先の予定の入店時間は入れません）。"]},
   {n:89,date:"11月11日",items:["予約通知を貼り付けたあと、「予約の日付」と「性別」を聞く画面が出るようにしました。予約通知には日付が書かれていないので、今日・明日・日付を選択から選んでください。2回目以降のお客様は、性別が前回の記録から入っています。はじめてのお客様には「はじめてのお客様です」と出ます。"]},
@@ -1316,14 +1348,16 @@ const SEEN_KEY="rirakuLogKo.seenVer";
 // 同じ日の更新はひとつにまとめて、更新した日だけを見出しにする
 function chgHtml(list){const g=[];list.forEach(c=>{const l=g[g.length-1];if(l&&l.date===c.date)l.items.push(...c.items);else g.push({date:c.date,items:[...c.items]})});
   return g.map(c=>`<div class="chg"><h4>${esc(c.date)}の更新</h4><ul>${c.items.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>`).join("")}
-function showHelp(which){show("help");
+let helpFrom="settings";
+function showHelp(which,from){show("help");helpFrom=from||"settings";$("helpBack").textContent=helpFrom==="input"?"‹ 入力に戻る":"‹ 設定に戻る";
   document.querySelectorAll(".help-tabs button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.h===which?"true":"false"));
   $("helpManual").hidden=which!=="manual";$("helpHistory").hidden=which!=="history";
   if(which==="history")$("helpHistory").innerHTML=`<div class="card">${chgHtml(CHANGELOG)}</div>`}
 document.querySelectorAll(".help-tabs button").forEach(b=>b.addEventListener("click",()=>showHelp(b.dataset.h)));
 $("openManual").addEventListener("click",()=>showHelp("manual"));
 $("openHistory").addEventListener("click",()=>showHelp("history"));
-$("helpBack").addEventListener("click",()=>show("settings"));
+$("helpBack").addEventListener("click",()=>{show(helpFrom);if(helpFrom==="input")setTimeout(()=>$("ocrBtn").scrollIntoView({block:"center"}),50)});
+$("ocrHelp").addEventListener("click",()=>{showHelp("manual","input");const d=$("helpOcr");d.open=true;setTimeout(()=>d.scrollIntoView({block:"start"}),50)});
 $("verNote").textContent="最終更新："+CHANGELOG[0].date;
 // 前に見た版より新しい分を、まとめてお知らせする（何回分たまっていても全部出す）
 setTimeout(function(){let seen=0;try{seen=Number(localStorage.getItem(SEEN_KEY))||0}catch(e){}
