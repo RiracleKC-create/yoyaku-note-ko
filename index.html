@@ -161,9 +161,12 @@ table.ytab td:last-child{font-weight:700;color:var(--ok)}table.ytab tr.none td{c
 #batchSum .bs-act .lnk{border:0;background:none;color:var(--shimei);font-weight:700;font-size:13px;padding:2px 4px;text-decoration:underline}
 #batchSum .bs-act .lnk.rm{color:var(--danger)}
 #batchSum .ask{color:#8A5A00;font-weight:700;font-size:12px}
+#batchSum .bs-feat{font-size:13px;background:var(--field);border-radius:8px;padding:4px 8px;overflow-wrap:anywhere}
+#batchSum .bs-feat small{display:block;color:var(--sub);font-size:12px}
 #batchSum .bs-tot{border-top:2px solid var(--line);padding-top:8px;display:flex;justify-content:space-between;font-weight:700;font-variant-numeric:tabular-nums}
 #batchSum .bs-btns{display:grid;gap:8px;margin-top:10px}
 #batchSum .bs-btns .btn{padding:12px 0}
+#batchSum .bs-btns .btn:disabled{opacity:.4}
 #pasteSum .memo-s{white-space:pre-wrap;font-size:12px;color:var(--sub)}
 #pasteSum .ps-btns{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}
 #pasteSum .ps-sub{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -2002,7 +2005,13 @@ function renderBatch(){
     const course=ps.length?ps.map(p=>p.k+p.m).join("+"):(r.span?r.span+"分":"コース不明");
     const tm=r.time?dispTime(r.time):"時間不明";
     let who="";
-    if(no&&whos.length){who=`<div class="bs-act">${whos.length>1&&!it.whoSet?`<span class="ask">同じ番号のお客様が${whos.length}人います。選んでください</span>`:""}${whos.map(w=>{const k=ckOf(no,w),n=memberNote(k);return `<button type="button" class="chip" data-bw="${i}:${w}" aria-pressed="${it.whoSet&&it.who===w}">${esc(whos.length>1||w>1?keyLabel(k):"前と同じお客様")}${n?"・"+esc(shortNote(k,10)):""}</button>`}).join("")}<button type="button" class="chip" data-bw="${i}:new" aria-pressed="${it.whoSet&&!whos.includes(it.who)}">別のお客様</button></div>`}
+    if(no&&whos.length){
+      // 選んでいるお客様の特徴（📌）と前回の来店を出して、同じ人か確かめやすくする
+      const info=w=>{const k=ckOf(no,w),n=memberNote(k),last=live(visits).filter(v=>v.member===no&&(v.who>1?v.who:1)===w).sort((x,y)=>(y.date+y.time).localeCompare(x.date+x.time))[0];
+        return `<div class="bs-feat">${n?"📌 "+esc(n):'<span style="color:var(--sub)">特徴の登録なし</span>'}${last?`<small>前回 ${dayLabel(last.date)}・${TYPES[last.type]||""}${last.sex&&SEX[last.sex]?"・"+SEX[last.sex]:""}</small>`:""}</div>`};
+      const sel=it.whoSet&&whos.includes(it.who)?it.who:null;
+      who=`<div class="bs-act">${whos.length>1&&!it.whoSet?`<span class="ask">同じ番号のお客様が${whos.length}人います。選んでください</span>`:""}${whos.map(w=>{const k=ckOf(no,w);return `<button type="button" class="chip" data-bw="${i}:${w}" aria-pressed="${sel===w}">${esc(whos.length>1||w>1?keyLabel(k):"前と同じお客様")}</button>`}).join("")}<button type="button" class="chip" data-bw="${i}:new" aria-pressed="${it.whoSet&&!whos.includes(it.who)}">別のお客様</button></div>`+
+        (sel?info(sel):whos.length>1&&!it.whoSet?whos.map(w=>`<div class="bs-feat"><b>${esc(keyLabel(ckOf(no,w)))}</b>　${info(w).replace(/^<div class="bs-feat">|<\/div>$/g,"")}</div>`).join(""):`<div class="bs-feat" style="color:var(--sub)">別のお客様として新しく登録します</div>`)}
     else if(no)who=`<div class="bs-l2">はじめてのお客様</div>`;
     return `<div class="bs-row">
       <div class="bs-l1"><b>${tm}　${no?esc(no):'<span class="miss">番号なし</span>'}</b><span class="bs-pr">${r.price?yen(r.price):'<span class="miss">金額なし</span>'}</span></div>
