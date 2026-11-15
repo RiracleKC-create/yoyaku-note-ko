@@ -1989,7 +1989,7 @@ function bItemInit(it){
 function batchStart(res){
   ocrBusy=false;ocrQ=[];
   batch={items:res.map(bItemInit),date:ocrDate||"",editing:null};
-  renderBatch();setTimeout(()=>$("batchSum").scrollIntoView({behavior:"smooth",block:"start"}),50)}
+  renderBatch();setTimeout(()=>scrollUnderHeader($("batchSum")),50)}
 function bParts(r){return r.parts&&Object.keys(r.parts).length?PARTS.filter(p=>r.parts[p.k]).map(p=>({k:p.k,m:r.parts[p.k]})):[]}
 function bVisit(it,dk){const r=it.r,ps=bParts(r),type=r.type||"free",no=r.member||"";
   const min=ps.reduce((a,p)=>a+p.m,0)||(r.span||0);
@@ -2051,7 +2051,7 @@ function batchBack(saved,it){if(!batch||!batch.editing)return false;const ed=bat
   if(!saved){batch.items.push(ed);batch.items.sort((a,b)=>a.st-b.st)}
   if(saved&&it&&it.date)batch.date=batch.date||it.date;
   if(!batch.items.length){batch=null;renderBatch();return true}
-  renderBatch();setTimeout(()=>$("batchSum").scrollIntoView({behavior:"smooth",block:"start"}),80);return true}
+  renderBatch();setTimeout(()=>scrollUnderHeader($("batchSum")),80);return true}
 function ocrNext(){
   if(!ocrQ.length){ocrBusy=false;return}
   const it=ocrQ.shift();
