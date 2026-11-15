@@ -1365,7 +1365,9 @@ document.querySelectorAll(".help-tabs button").forEach(b=>b.addEventListener("cl
 $("openManual").addEventListener("click",()=>showHelp("manual"));
 $("openHistory").addEventListener("click",()=>showHelp("history"));
 $("helpBack").addEventListener("click",()=>{show(helpFrom);if(helpFrom==="input")setTimeout(()=>$("ocrBtn").scrollIntoView({block:"center"}),50)});
-$("ocrHelp").addEventListener("click",()=>{showHelp("manual","input");const d=$("helpOcr");d.open=true;setTimeout(()=>d.scrollIntoView({block:"start"}),50)});
+// 上の売上の部分（画面上に固定）に隠れないよう、その高さぶん下げて説明の見出しから表示する
+function scrollUnderHeader(el){const h=document.querySelector("header.top");const off=(h?h.getBoundingClientRect().height:0)+8;window.scrollTo(0,el.getBoundingClientRect().top+window.scrollY-off)}
+$("ocrHelp").addEventListener("click",()=>{showHelp("manual","input");const d=$("helpOcr");d.open=true;setTimeout(()=>scrollUnderHeader(d),50)});
 $("verNote").textContent="最終更新："+CHANGELOG[0].date;
 // 前に見た版より新しい分を、まとめてお知らせする（何回分たまっていても全部出す）
 setTimeout(function(){let seen=0;try{seen=Number(localStorage.getItem(SEEN_KEY))||0}catch(e){}
