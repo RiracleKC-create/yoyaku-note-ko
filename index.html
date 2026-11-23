@@ -3153,5 +3153,263 @@ setTimeout(checkShared,300);
 if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{})})}
 if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().catch(()=>{})}
 </script>
+<!-- ===== からだ図鑑（（個）だけ） ===== -->
+<style>
+#zukan{position:fixed;inset:0;z-index:95;background:var(--bg);overflow:auto;-webkit-overflow-scrolling:touch}
+#zukan[hidden]{display:none!important}
+#zukan .zk-head{position:sticky;top:0;z-index:2;background:var(--bg);padding:12px 16px 8px;border-bottom:1px solid var(--line)}
+#zukan .zk-top{display:flex;align-items:center;gap:10px}
+#zukan .zk-back{border:0;background:var(--panel);color:inherit;border-radius:999px;padding:8px 14px;font-size:14px;font-weight:700}
+#zukan h2{font-size:18px;margin:0;flex:1}
+#zukan .zk-tabs{display:flex;gap:6px;margin-top:10px}
+#zukan .zk-tabs button{flex:1;border:1px solid var(--line);background:var(--panel);color:inherit;border-radius:10px;padding:9px 0;font-size:14px;font-weight:700}
+#zukan .zk-tabs button.on{background:#C0392B;border-color:#C0392B;color:#fff}
+#zukan .zk-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+#zukan .zk-chips button{border:1px solid var(--line);background:var(--panel);color:inherit;border-radius:999px;padding:5px 11px;font-size:13px}
+#zukan .zk-chips button.on{background:#C0392B22;border-color:#C0392B;color:#C0392B;font-weight:700}
+#zukan .zk-q{width:100%;box-sizing:border-box;margin-top:8px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:inherit;font-size:15px}
+#zukan .zk-from{font-size:12px;color:var(--sub);margin-top:6px}
+#zukan .zk-list{padding:10px 16px 40px}
+#zukan .zk-item{background:var(--panel);border-radius:14px;margin-bottom:8px;overflow:hidden}
+#zukan .zk-sum{display:flex;align-items:baseline;gap:8px;padding:12px 14px;cursor:pointer}
+#zukan .zk-sum b{font-size:16px}
+#zukan .zk-sum small{color:var(--sub);font-size:12px}
+#zukan .zk-sum .zk-code{margin-left:auto;font-size:11px;color:var(--sub);white-space:nowrap}
+#zukan .zk-det{padding:0 14px 14px;font-size:14px;line-height:1.65}
+#zukan .zk-figs{display:flex;gap:8px;justify-content:center;margin:2px 0 8px}
+#zukan .zk-figs figure{margin:0;flex:1;max-width:170px;text-align:center}
+#zukan .zk-figs figcaption{font-size:11px;color:var(--sub)}
+#zukan .zk-figs svg{width:100%;height:auto;display:block}
+#zukan dl{margin:0}#zukan dt{font-size:12px;color:var(--sub);margin-top:6px}#zukan dd{margin:0}
+#zukan .zk-rel{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+#zukan .zk-rel button{border:1px solid var(--line);background:transparent;color:inherit;border-radius:999px;padding:3px 10px;font-size:12px}
+#zukan .zk-warn{font-size:12px;color:#C0392B;margin-top:6px}
+#zukan .zk-note{font-size:12px;color:var(--sub);margin:12px 2px 0;line-height:1.6}
+#zukan .zk-empty{color:var(--sub);font-size:14px;padding:20px 4px}
+.zk-link{margin-top:8px}
+.zk-link button{border:1px solid #C0392B;background:transparent;color:#C0392B;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700}
+.zk-btn{font-size:19px}
+</style>
+<div id="zukan" hidden>
+  <div class="zk-head">
+    <div class="zk-top"><button class="zk-back" id="zkBack">‹ 戻る</button><h2>からだ図鑑</h2></div>
+    <div class="zk-tabs" id="zkTabs"><button data-t="m" class="on">筋肉</button><button data-t="p">経穴（ツボ）</button><button data-t="k">経絡</button></div>
+    <div class="zk-chips" id="zkChips"></div>
+    <input class="zk-q" id="zkQ" type="search" placeholder="名前・よみで探す（例：そうぼう、ふうち）">
+    <div class="zk-from" id="zkFrom" hidden></div>
+  </div>
+  <div class="zk-list" id="zkList"></div>
+</div>
+<script>
+(function(){
+const $z=id=>document.getElementById(id);
+const REG=[["head","頭・顔"],["neck","首"],["shoulder","肩"],["back","背中"],["lowback","腰"],["arm","腕・手"],["hip","お尻"],["thigh","ふともも"],["calf","ふくらはぎ・すね"],["foot","足・足裏"]];
+const REGN=Object.fromEntries(REG);
+// 予約ノートの「お疲れ部位」の言葉 → 図鑑の部位
+const AREA2REG={"首":"neck","肩":"shoulder","背中":"back","腕":"arm","腰":"lowback","臀部":"hip","お尻":"hip","ふともも":"thigh","太もも":"thigh","ふくらはぎ":"calf","すね":"calf","足裏":"foot","足":"foot","頭":"head","顔":"head","手":"arm"};
+// 図：左が前・右が後ろ。座標は「図の左側」に描き、左右対称に反転して両側に出す（x=100 は体の真ん中）
+// ---------- 筋肉 ----------
+const M=[
+{n:"胸鎖乳突筋",y:"きょうさにゅうとつきん",r:["neck","head"],v:"F",s:["86,44 91,44 99,70 94,70"],o:"胸骨・鎖骨 → 耳の後ろの骨（乳様突起）",w:"首を横に倒す・反対側に回す、あごを前に出す",p:"スマホ・前かがみの姿勢でこわばりやすく、頭痛や目の奥の重さにつながることも。すぐそばに頸動脈があるので強く押さない。"},
+{n:"斜角筋",y:"しゃかくきん",r:["neck"],v:"F",s:["87,56 91,56 86,72 81,72"],o:"首の骨（頸椎）→ 第1・第2肋骨",w:"首を横に倒す、深い呼吸を助ける",p:"浅い呼吸のくせがある人は張りやすい。腕のしびれ（胸郭出口）に関わることがある。"},
+{n:"板状筋（頭板状筋）",y:"ばんじょうきん",r:["neck","head"],v:"B",s:["97,72 100,72 93,38 87,40"],o:"首〜背中上部の骨の突起 → 後頭部・乳様突起",w:"首を後ろに反らす・回す",p:"うつむき姿勢で張り、後頭部の頭痛につながりやすい。"},
+{n:"後頭下筋群",y:"こうとうかきんぐん",r:["neck","head"],v:"B",e:[[93,46,6,3.5]],o:"頭の付け根と上位頸椎をつなぐ小さな筋肉の集まり",w:"頭の細かい動き。目の動きとも連動する",p:"目の疲れ・頭痛と関係が深い。風池・天柱のあたり。"},
+{n:"肩甲挙筋",y:"けんこうきょきん",r:["neck","shoulder"],v:"B",s:["87,52 92,52 79,88 74,86"],o:"上位頸椎 → 肩甲骨の上角",w:"肩甲骨を引き上げる、首を横に倒す",p:"寝違えや、首の付け根〜肩甲骨の上の角の痛みの原因になりやすい。"},
+{n:"僧帽筋",y:"そうぼうきん",r:["shoulder","neck","back"],v:"B",s:["100,44 90,58 60,76 100,152"],o:"後頭骨・頸椎・胸椎 → 鎖骨・肩甲骨",w:"上部は肩をすくめる、中部は肩甲骨を寄せる、下部は肩甲骨を下げる",p:"肩こりの代表。上部は肩井のあたり。"},
+{n:"三角筋",y:"さんかくきん",r:["shoulder","arm"],v:"F",s:["56,73 66,76 64,104 52,100 49,86"],o:"鎖骨・肩峰・肩甲棘 → 上腕骨",w:"腕を横・前・後ろに上げる",p:"重い物を持つ、腕を上げ続ける仕事で疲れやすい。"},
+{n:"棘上筋",y:"きょくじょうきん",r:["shoulder"],v:"B",s:["70,79 92,79 92,86 70,86"],o:"肩甲骨の上のくぼみ → 上腕骨",w:"腕を横に上げはじめる、肩関節を安定させる（回旋筋腱板）",p:"五十肩・肩の痛みに関わりやすい。"},
+{n:"棘下筋",y:"きょくかきん",r:["shoulder","back"],v:"B",s:["72,90 92,88 90,110 76,108"],o:"肩甲骨の下のくぼみ → 上腕骨",w:"腕を外にひねる（外旋）",p:"天宗のあたり。押すと腕まで響くことがある。"},
+{n:"小円筋",y:"しょうえんきん",r:["shoulder"],v:"B",s:["66,96 72,94 76,106 70,108"],o:"肩甲骨の外側のふち → 上腕骨",w:"腕を外にひねる",p:"肩の後ろ〜脇の後ろの痛み。"},
+{n:"大円筋",y:"だいえんきん",r:["shoulder","back"],v:"B",s:["65,108 76,110 74,118 63,114"],o:"肩甲骨の下の角 → 上腕骨",w:"腕を内にひねる・後ろに引く",p:"広背筋と一緒に働く。脇の後ろの張り。"},
+{n:"菱形筋",y:"りょうけいきん",r:["back","shoulder"],v:"B",s:["98,74 98,112 82,110 80,86"],o:"首の下部〜背中上部の骨 → 肩甲骨の内側のふち",w:"肩甲骨を背骨に寄せる",p:"肩甲骨の内側の痛み・張り。デスクワークで引き伸ばされ続けて疲れる。"},
+{n:"大胸筋",y:"だいきょうきん",r:["shoulder"],v:"F",s:["68,80 98,78 98,108 74,110 62,92"],o:"鎖骨・胸骨・肋軟骨 → 上腕骨",w:"腕を前・内に動かす",p:"縮こまると巻き肩・猫背になり、肩こりの原因にも。"},
+{n:"小胸筋",y:"しょうきょうきん",r:["shoulder"],v:"F",s:["72,84 84,88 80,100 70,96"],o:"第3〜5肋骨 → 肩甲骨の烏口突起",w:"肩甲骨を前・下に引く",p:"巻き肩、腕のしびれに関わることがある。"},
+{n:"前鋸筋",y:"ぜんきょきん",r:["back","shoulder"],v:"F",s:["66,104 74,104 76,130 68,128"],o:"第1〜9肋骨 → 肩甲骨の内側のふち",w:"肩甲骨を前に出す、腕を上げるのを助ける",p:"脇の下の張り。"},
+{n:"広背筋",y:"こうはいきん",r:["back","lowback"],v:"B",s:["64,110 98,150 98,198 76,200 68,160"],o:"背中下部〜腰の骨・骨盤 → 上腕骨",w:"腕を後ろ・下に引く、内にひねる",p:"背中の外側〜脇の張り。腰痛にも関わる。"},
+{n:"脊柱起立筋",y:"せきちゅうきりつきん",r:["back","lowback"],v:"B",s:["92,70 98,70 98,215 88,215"],o:"骨盤・腰椎 → 肋骨・頸椎・後頭骨（背骨に沿う長い筋肉）",w:"背中を反らす・姿勢を保つ",p:"背中・腰の張りの代表。"},
+{n:"多裂筋",y:"たれつきん",r:["back","lowback"],v:"B",s:["96,140 100,140 100,226 96,226"],o:"背骨の一つひとつをつなぐ深い筋肉",w:"背骨を安定させる",p:"慢性の腰痛と関係が深い。"},
+{n:"腰方形筋",y:"ようほうけいきん",r:["lowback"],v:"B",s:["84,180 94,180 94,210 82,206"],o:"骨盤（腸骨稜）→ 第12肋骨・腰椎",w:"体を横に倒す、骨盤を引き上げる",p:"片側だけの腰痛の原因になりやすい。"},
+{n:"腸腰筋（大腰筋・腸骨筋）",y:"ちょうようきん",r:["lowback","hip","thigh"],v:"F",s:["88,180 96,180 94,232 82,240 78,228"],o:"腰椎・骨盤の内側 → 太ももの骨（小転子）",w:"太ももを持ち上げる、姿勢を保つ",p:"座りっぱなしで縮こまり、腰痛や反り腰の原因に。お腹側からの施術は慎重に。"},
+{n:"上腕二頭筋",y:"じょうわんにとうきん",r:["arm"],v:"F",s:["52,102 62,104 58,150 50,148"],o:"肩甲骨 → 前腕の骨（橈骨）",w:"肘を曲げる、手のひらを上に向ける",p:"重い物を持つ仕事で疲れる。"},
+{n:"上腕三頭筋",y:"じょうわんさんとうきん",r:["arm"],v:"B",s:["50,100 62,102 58,152 48,150"],o:"肩甲骨・上腕骨 → 肘の骨",w:"肘を伸ばす",p:"二の腕の張り。"},
+{n:"腕橈骨筋",y:"わんとうこつきん",r:["arm"],v:"F",s:["45,158 51,160 43,210 39,208"],o:"上腕骨の外側 → 手首の親指側",w:"肘を曲げる",p:"手三里のあたり。パソコン・スマホで疲れやすい。"},
+{n:"前腕屈筋群",y:"ぜんわんくっきんぐん",r:["arm"],v:"F",s:["51,164 58,164 52,222 46,222"],o:"肘の内側 → 手首・指",w:"手首と指を曲げる、握る",p:"握る動作が多い人（美容師・施術者など）は硬くなりやすい。"},
+{n:"前腕伸筋群",y:"ぜんわんしんきんぐん",r:["arm"],v:"B",s:["44,164 54,164 46,222 40,220"],o:"肘の外側 → 手首・指",w:"手首と指を伸ばす",p:"テニス肘、マウス・キーボード作業の疲れ。"},
+{n:"母指球筋",y:"ぼしきゅうきん",r:["arm"],v:"F",e:[[40,238,3.5,6]],o:"親指の付け根のふくらみの筋肉の集まり",w:"親指を動かす、つまむ",p:"スマホ・施術・ハサミで酷使されやすい。"},
+{n:"小指球筋",y:"しょうしきゅうきん",r:["arm"],v:"F",e:[[48,240,3,6]],o:"小指側のふくらみの筋肉の集まり",w:"小指を動かす、握る",p:"握る仕事で疲れる。"},
+{n:"骨間筋",y:"こっかんきん",r:["arm"],v:"B",e:[[43,244,4,6]],o:"手の甲の骨（中手骨）の間",w:"指を開く・閉じる、細かい動き",p:"指先を使う仕事で疲れる。合谷のあたり。"},
+{n:"大殿筋",y:"だいでんきん",r:["hip"],v:"B",s:["70,220 98,222 98,256 74,258 66,240"],o:"骨盤・仙骨 → 太ももの骨・腸脛靭帯",w:"股関節を伸ばす（立ち上がる・階段を上る）",p:"座りっぱなしで弱く・硬くなりやすい。"},
+{n:"中殿筋",y:"ちゅうでんきん",r:["hip","lowback"],v:"B",s:["67,204 92,203 92,219 67,224"],o:"骨盤（腸骨）→ 太ももの骨（大転子）",w:"足を横に開く、歩くときに骨盤を安定させる",p:"腰痛・お尻の上外側の痛み。"},
+{n:"小殿筋",y:"しょうでんきん",r:["hip"],v:"B",s:["70,209 84,207 84,219 70,222"],o:"中殿筋の下の深い筋肉",w:"中殿筋を助ける",p:"足の外側に響く痛みの原因になることがある。"},
+{n:"梨状筋",y:"りじょうきん",r:["hip"],v:"B",s:["77,228 96,226 96,231 77,235"],o:"仙骨 → 太ももの骨（大転子）",w:"股関節を外にひねる",p:"そばを坐骨神経が通り、お尻〜足のしびれ（梨状筋症候群）に関わる。"},
+{n:"大腿筋膜張筋",y:"だいたいきんまくちょうきん",r:["hip","thigh"],v:"F",s:["65,226 71,226 72,256 66,252"],o:"骨盤（腸骨）→ 腸脛靭帯",w:"足を前・横に上げる",p:"太もも外側の張り（腸脛靭帯）。"},
+{n:"大腿四頭筋",y:"だいたいしとうきん",r:["thigh"],v:"F",s:["70,244 96,246 94,318 78,318"],o:"骨盤・太ももの骨 → 膝のお皿 → すねの骨",w:"膝を伸ばす",p:"膝の痛み、立ち仕事・階段の疲れ。"},
+{n:"ハムストリングス",y:"はむすとりんぐす",r:["thigh"],v:"B",s:["72,258 98,258 96,318 78,318"],o:"坐骨 → すねの骨",w:"膝を曲げる、股関節を伸ばす",p:"硬いと前屈しにくく、腰痛の原因に。"},
+{n:"内転筋群",y:"ないてんきんぐん",r:["thigh"],v:"F",s:["92,248 99,246 98,296 92,300"],o:"恥骨 → 太ももの骨の内側",w:"足を閉じる、骨盤を安定させる",p:"股関節の痛み。"},
+{n:"縫工筋",y:"ほうこうきん",r:["thigh"],v:"F",s:["71,238 76,236 96,312 92,316"],o:"骨盤の前の出っぱり → すねの骨の内側",w:"あぐらをかく動き",p:"体でいちばん長い筋肉。"},
+{n:"腓腹筋",y:"ひふくきん",r:["calf"],v:"B",s:["78,326 96,326 94,368 80,368"],o:"太ももの骨の下端 → アキレス腱 → かかと",w:"つま先立ち、膝を曲げる",p:"こむら返り、ふくらはぎの疲れ・むくみ。"},
+{n:"ヒラメ筋",y:"ひらめきん",r:["calf"],v:"B",s:["80,350 94,350 92,392 82,392"],o:"すねの骨 → アキレス腱",w:"つま先立ち、立っている姿勢を保つ",p:"立ち仕事の疲れ、むくみ。「第二の心臓」とも。"},
+{n:"前脛骨筋",y:"ぜんけいこつきん",r:["calf"],v:"F",s:["84,328 90,328 90,396 86,396"],o:"すねの骨の外側 → 足の内側",w:"つま先を上げる",p:"すねの張り、つまずきやすさ。"},
+{n:"腓骨筋",y:"ひこつきん",r:["calf","foot"],v:"F",s:["77,330 83,330 84,396 81,396"],o:"すねの外側の骨（腓骨）→ 足の外側・足裏",w:"足首を外に返す、足首を安定させる",p:"足首の捻挫のあと、すね外側の張り。"},
+{n:"足底腱膜・足底の筋群",y:"そくていけんまく",r:["foot"],v:"B",s:["80,404 94,404 96,420 78,422"],o:"かかと → 足の指の付け根",w:"土踏まずのアーチを支える",p:"かかとの痛み（足底腱膜炎）、立ち仕事の疲れ。"},
+{n:"側頭筋",y:"そくとうきん",r:["head"],v:"F",e:[[84,25,5,9]],o:"側頭部 → 下あご",w:"口を閉じる、噛む",p:"食いしばりでこわばり、こめかみの頭痛の原因に。"},
+{n:"咬筋",y:"こうきん",r:["head"],v:"F",e:[[87,45,4,5]],o:"頬骨 → 下あごの角",w:"噛む",p:"食いしばり・歯ぎしり、あごの不調。"}
+];
+// ---------- 経穴（ツボ） ---------- m=経絡、pt=[見る面,x,y]
+const P=[
+{n:"百会",y:"ひゃくえ",c:"GV20",m:"GV",r:["head"],pt:[["B",100,12]],l:"頭のてっぺん。両耳の先を結んだ線と、頭の真ん中の線が交わるところ",f:"頭痛、めまい、不眠、気分の落ち込み"},
+{n:"風池",y:"ふうち",c:"GB20",m:"GB",r:["neck","head"],pt:[["B",89,45]],l:"後頭部の髪の生え際。首の太い2本の筋肉（胸鎖乳突筋と僧帽筋）の上端の間のくぼみ",f:"頭痛、首・肩のこり、目の疲れ、かぜの引きはじめ"},
+{n:"天柱",y:"てんちゅう",c:"BL10",m:"BL",r:["neck","head"],pt:[["B",95,47]],l:"首の後ろ、髪の生え際。僧帽筋の外側のふちのくぼみ（風池の内側）",f:"首のこり、頭痛、目の疲れ"},
+{n:"完骨",y:"かんこつ",c:"GB12",m:"GB",r:["head","neck"],pt:[["B",84,40]],l:"耳の後ろの骨の出っぱり（乳様突起）の、後ろ下のくぼみ",f:"頭痛、首のこり、不眠"},
+{n:"太陽",y:"たいよう",c:"奇穴",m:"",r:["head"],pt:[["F",82,30]],l:"こめかみ。眉尻と目尻の真ん中から、後ろへ指1本分のくぼみ",f:"目の疲れ、こめかみの頭痛"},
+{n:"攅竹",y:"さんちく",c:"BL2",m:"BL",r:["head"],pt:[["F",95,25]],l:"眉頭のくぼみ",f:"目の疲れ、おでこの頭痛"},
+{n:"大椎",y:"だいつい",c:"GV14",m:"GV",r:["neck","back"],pt:[["B",100,67]],l:"首を前に倒すといちばん出っぱる骨（第7頸椎）のすぐ下",f:"首・肩のこり、かぜ、のぼせ"},
+{n:"肩井",y:"けんせい",c:"GB21",m:"GB",r:["shoulder","neck"],pt:[["B",77,70]],l:"首の付け根の骨（第7頸椎）と肩先を結んだ線の真ん中",f:"肩こり、首のこり、頭痛",x:"妊娠中の方には強い刺激を避けるとされる"},
+{n:"肩中兪",y:"けんちゅうゆ",c:"SI15",m:"SI",r:["shoulder","neck"],pt:[["B",90,70]],l:"第7頸椎の下の高さ、背骨の真ん中から外へ指3本分（2寸）",f:"肩こり、背中上部の張り"},
+{n:"肩外兪",y:"けんがいゆ",c:"SI14",m:"SI",r:["shoulder"],pt:[["B",85,76]],l:"第1胸椎の下の高さ、背骨の真ん中から外へ3寸（肩甲骨の上の内側の角の近く）",f:"肩こり、肩甲骨まわりの痛み"},
+{n:"天宗",y:"てんそう",c:"SI11",m:"SI",r:["shoulder","back"],pt:[["B",80,98]],l:"肩甲骨の真ん中あたりのくぼみ",f:"肩甲骨まわりのこり、腕の痛み"},
+{n:"肩髃",y:"けんぐう",c:"LI15",m:"LI",r:["shoulder","arm"],pt:[["F",58,80]],l:"腕を横に上げたとき、肩先の前にできるくぼみ",f:"肩の痛み、五十肩、腕が上がらない"},
+{n:"肩髎",y:"けんりょう",c:"TE14",m:"TE",r:["shoulder","arm"],pt:[["B",59,80]],l:"腕を横に上げたとき、肩先の後ろにできるくぼみ",f:"肩の痛み、五十肩"},
+{n:"風門",y:"ふうもん",c:"BL12",m:"BL",r:["back","neck"],pt:[["B",93,82]],l:"第2胸椎の下の高さ、背骨の真ん中から外へ1.5寸",f:"かぜの引きはじめ、首・肩のこり"},
+{n:"肺兪",y:"はいゆ",c:"BL13",m:"BL",r:["back"],pt:[["B",93,88]],l:"第3胸椎の下の高さ、背骨の真ん中から外へ1.5寸",f:"せき、呼吸の不調、背中のこり"},
+{n:"心兪",y:"しんゆ",c:"BL15",m:"BL",r:["back"],pt:[["B",93,100]],l:"第5胸椎の下の高さ、背骨の真ん中から外へ1.5寸",f:"動悸、不安、不眠"},
+{n:"膈兪",y:"かくゆ",c:"BL17",m:"BL",r:["back"],pt:[["B",93,112]],l:"第7胸椎の下の高さ（肩甲骨の下の角の高さ）、背骨の真ん中から外へ1.5寸",f:"しゃっくり、胃の不調、血のめぐり"},
+{n:"肝兪",y:"かんゆ",c:"BL18",m:"BL",r:["back"],pt:[["B",93,124]],l:"第9胸椎の下の高さ、背骨の真ん中から外へ1.5寸",f:"目の疲れ、イライラ"},
+{n:"脾兪",y:"ひゆ",c:"BL20",m:"BL",r:["back"],pt:[["B",93,136]],l:"第11胸椎の下の高さ、背骨の真ん中から外へ1.5寸",f:"胃腸の不調、食欲不振、疲れやすさ"},
+{n:"胃兪",y:"いゆ",c:"BL21",m:"BL",r:["back"],pt:[["B",93,142]],l:"第12胸椎の下の高さ、背骨の真ん中から外へ1.5寸",f:"胃の痛み、胃もたれ"},
+{n:"腎兪",y:"じんゆ",c:"BL23",m:"BL",r:["lowback"],pt:[["B",93,164]],l:"第2腰椎の下の高さ（だいたいおへその裏）、背骨の真ん中から外へ1.5寸",f:"腰痛、冷え、疲れ、むくみ"},
+{n:"志室",y:"ししつ",c:"BL52",m:"BL",r:["lowback"],pt:[["B",86,164]],l:"第2腰椎の下の高さ、背骨の真ん中から外へ3寸",f:"腰痛、腰のだるさ"},
+{n:"命門",y:"めいもん",c:"GV4",m:"GV",r:["lowback"],pt:[["B",100,164]],l:"第2腰椎の下、背骨の真ん中",f:"腰痛、冷え"},
+{n:"大腸兪",y:"だいちょうゆ",c:"BL25",m:"BL",r:["lowback"],pt:[["B",93,180]],l:"第4腰椎の下の高さ（骨盤のいちばん高いところを結んだ線）、背骨の真ん中から外へ1.5寸",f:"腰痛、便秘・下痢"},
+{n:"腰眼",y:"ようがん",c:"奇穴",m:"",r:["lowback"],pt:[["B",83,182]],l:"第4腰椎の下の高さ、背骨の真ん中から外へ約3.5寸のくぼみ",f:"腰痛"},
+{n:"次髎",y:"じりょう",c:"BL32",m:"BL",r:["lowback","hip"],pt:[["B",95,210]],l:"仙骨の上から2番目の穴（第2後仙骨孔）",f:"腰痛、生理痛"},
+{n:"秩辺",y:"ちっぺん",c:"BL54",m:"BL",r:["hip","lowback"],pt:[["B",87,216]],l:"仙骨の第4の穴の高さ、仙骨の真ん中から外へ3寸",f:"腰痛、坐骨神経痛"},
+{n:"環跳",y:"かんちょう",c:"GB30",m:"GB",r:["hip"],pt:[["B",73,232]],l:"太ももの付け根の外側の出っぱり（大転子）と、仙骨の下の端を結んだ線の外側1/3",f:"坐骨神経痛、腰・お尻の痛み"},
+{n:"曲池",y:"きょくち",c:"LI11",m:"LI",r:["arm"],pt:[["F",45,160]],l:"肘を曲げてできる横じわの、親指側の端",f:"腕の痛み、皮膚のかゆみ、目の充血"},
+{n:"手三里",y:"てさんり",c:"LI10",m:"LI",r:["arm"],pt:[["F",44,172]],l:"曲池から手首の方へ指3本分（2寸）",f:"腕の疲れ・痛み、肩こり、胃腸"},
+{n:"合谷",y:"ごうこく",c:"LI4",m:"LI",r:["arm"],pt:[["B",41,243]],l:"手の甲、親指と人差し指の骨の間。人差し指の骨の真ん中のあたり",f:"頭痛、歯の痛み、肩こり、目の疲れ",x:"妊娠中の方には強い刺激を避けるとされる"},
+{n:"外関",y:"がいかん",c:"TE5",m:"TE",r:["arm"],pt:[["B",46,208]],l:"手の甲側、手首の横じわから肘の方へ2寸。2本の骨の間",f:"手首の痛み、首・肩のこり、耳鳴り"},
+{n:"後渓",y:"こうけい",c:"SI3",m:"SI",r:["arm","neck"],pt:[["B",50,246]],l:"手を軽く握ったとき、小指の付け根の外側にできる横じわの端",f:"寝違え、首・背中の痛み"},
+{n:"内関",y:"ないかん",c:"PC6",m:"PC",r:["arm"],pt:[["F",49,208]],l:"手のひら側、手首の横じわから肘の方へ2寸。2本の腱の間",f:"吐き気、乗り物酔い、動悸、胃の不調"},
+{n:"労宮",y:"ろうきゅう",c:"PC8",m:"PC",r:["arm"],pt:[["F",44,246]],l:"手のひら。軽く握ったとき中指の先が当たるところ",f:"手の疲れ、緊張をほぐす"},
+{n:"神門",y:"しんもん",c:"HT7",m:"HT",r:["arm"],pt:[["F",52,224]],l:"手のひら側、手首の横じわの小指側のくぼみ",f:"不眠、不安、動悸"},
+{n:"殷門",y:"いんもん",c:"BL37",m:"BL",r:["thigh"],pt:[["B",86,286]],l:"太ももの裏の真ん中。お尻の下のしわから下へ6寸",f:"腰痛、太ももの裏の張り"},
+{n:"風市",y:"ふうし",c:"GB31",m:"GB",r:["thigh"],pt:[["F",69,282]],l:"気をつけの姿勢で、中指の先が太ももの外側に当たるところ",f:"太ももの外側のしびれ・痛み、足のだるさ"},
+{n:"血海",y:"けっかい",c:"SP10",m:"SP",r:["thigh"],pt:[["F",93,306]],l:"膝のお皿の内側の上の角から上へ2寸。内ももの筋肉の盛り上がり",f:"生理の不調、皮膚のかゆみ、膝の痛み"},
+{n:"梁丘",y:"りょうきゅう",c:"ST34",m:"ST",r:["thigh"],pt:[["F",79,306]],l:"膝のお皿の外側の上の角から上へ2寸",f:"急な胃の痛み、膝の痛み"},
+{n:"委中",y:"いちゅう",c:"BL40",m:"BL",r:["calf","thigh"],pt:[["B",87,322]],l:"膝の裏の横じわの真ん中",f:"腰痛、膝の痛み、ふくらはぎの張り"},
+{n:"足三里",y:"あしさんり",c:"ST36",m:"ST",r:["calf"],pt:[["F",82,338]],l:"膝のお皿の下の外側のくぼみから下へ3寸、すねの骨の外側へ指1本分",f:"胃腸の不調、疲れ、足のだるさ"},
+{n:"陽陵泉",y:"ようりょうせん",c:"GB34",m:"GB",r:["calf"],pt:[["F",78,333]],l:"膝の外側の下、すねの外側の骨の頭（腓骨頭）の前下のくぼみ",f:"足のつり、筋肉のこわばり、膝の痛み"},
+{n:"陰陵泉",y:"いんりょうせん",c:"SP9",m:"SP",r:["calf"],pt:[["F",94,334]],l:"すねの骨の内側を下からなで上げて、指が止まるくぼみ",f:"むくみ、膝の痛み、胃腸"},
+{n:"承山",y:"しょうざん",c:"BL57",m:"BL",r:["calf"],pt:[["B",87,370]],l:"ふくらはぎの真ん中。つま先立ちしたときにできる筋肉の山の下のくぼみ",f:"こむら返り、ふくらはぎの疲れ、腰痛"},
+{n:"三陰交",y:"さんいんこう",c:"SP6",m:"SP",r:["calf"],pt:[["F",91,382]],l:"内くるぶしの頂点から上へ3寸、すねの骨の内側の後ろ",f:"冷え、生理の不調、むくみ、不眠",x:"妊娠中の方には強い刺激を避けるとされる"},
+{n:"太衝",y:"たいしょう",c:"LR3",m:"LR",r:["foot"],pt:[["F",88,414]],l:"足の甲、親指と人差し指の骨の間を足首の方へなで上げて、指が止まるくぼみ",f:"イライラ、頭痛、目の疲れ、足の疲れ"},
+{n:"湧泉",y:"ゆうせん",c:"KI1",m:"KI",r:["foot"],pt:[["B",87,413]],l:"足の裏、足の指を曲げたときにできるくぼみ（足の裏の前から1/3）",f:"疲れ、冷え、のぼせ、不眠"},
+{n:"太渓",y:"たいけい",c:"KI3",m:"KI",r:["foot","calf"],pt:[["F",93,401]],l:"内くるぶしの頂点とアキレス腱の間のくぼみ",f:"冷え、腰のだるさ、足の疲れ"},
+{n:"崑崙",y:"こんろん",c:"BL60",m:"BL",r:["foot","calf"],pt:[["B",80,401]],l:"外くるぶしの頂点とアキレス腱の間のくぼみ",f:"腰痛、足首の痛み、頭痛"},
+{n:"失眠",y:"しつみん",c:"奇穴",m:"",r:["foot"],pt:[["B",87,422]],l:"かかとの真ん中",f:"不眠、足の疲れ"}
+];
+// ---------- 経絡 ---------- v=描く面、path=通り道の目安
+const K=[
+{k:"LU",n:"肺経",f:"手の太陰肺経",c:11,t:"3〜5時",v:"F",path:[[70,80],[60,104],[53,150],[46,200],[40,224],[37,252]],fl:"胸の外上（中府）から、腕の内側の親指側を通って、親指の先（少商）へ",z:"呼吸、皮膚、かぜの引きはじめ"},
+{k:"LI",n:"大腸経",f:"手の陽明大腸経",c:20,t:"5〜7時",v:"F",path:[[42,258],[40,242],[44,200],[45,160],[52,110],[58,80],[88,64],[93,48],[96,38]],fl:"人差し指の先（商陽）から、腕の外側の親指側を上り、肩・首を通って小鼻の横（迎香）へ",z:"歯・顔・のど、便通"},
+{k:"ST",n:"胃経",f:"足の陽明胃経",c:45,t:"7〜9時",v:"F",path:[[93,31],[88,46],[92,62],[82,80],[82,150],[88,175],[88,222],[80,250],[79,306],[82,338],[85,390],[87,424]],fl:"目の下（承泣）から、顔・首・胸・お腹・太ももの前・すねの外側を下りて、足の人差し指の先（厲兌）へ",z:"消化、食欲、顔"},
+{k:"SP",n:"脾経",f:"足の太陰脾経",c:21,t:"9〜11時",v:"F",path:[[91,424],[93,402],[91,382],[94,334],[93,306],[91,250],[85,205],[74,120],[70,96]],fl:"足の親指の内側（隠白）から、足の内側・すねの内側・太ももの内側を上り、お腹を通って胸の脇（大包）へ",z:"消化吸収、むくみ、生理の不調"},
+{k:"HT",n:"心経",f:"手の少陰心経",c:9,t:"11〜13時",v:"F",path:[[66,100],[60,150],[55,190],[52,224],[50,254]],fl:"脇の下（極泉）から、腕の内側の小指側を通って、小指の先（少衝）へ",z:"心・気持ち、動悸、不眠"},
+{k:"SI",n:"小腸経",f:"手の太陽小腸経",c:19,t:"13〜15時",v:"B",path:[[50,254],[50,246],[52,200],[58,160],[64,104],[80,98],[85,76],[90,70],[88,56],[86,46]],fl:"小指の先（少沢）から、腕の外側の小指側を上り、肩甲骨・首を通って耳の前（聴宮）へ",z:"首・肩・肩甲骨のこり、耳"},
+{k:"BL",n:"膀胱経",f:"足の太陽膀胱経",c:67,t:"15〜17時",v:"B",path:[[96,16],[95,47],[93,82],[93,180],[95,210],[88,250],[86,286],[87,322],[87,370],[80,401],[78,423]],fl:"目頭（睛明）から、頭・首・背骨の両側（2本の線）・お尻・太ももの裏・膝の裏・ふくらはぎ・外くるぶしを通って、足の小指の先（至陰）へ",z:"背中・腰の痛み。背中に各臓器の名前が付いたツボ（兪穴）が並ぶ"},
+{k:"KI",n:"腎経",f:"足の少陰腎経",c:27,t:"17〜19時",v:"F",path:[[88,422],[93,401],[94,360],[96,330],[98,262],[97,200],[96,120],[94,88]],fl:"足の裏（湧泉）から、内くるぶし・すねと太ももの内側を上り、お腹・胸（兪府）へ",z:"冷え、腰、疲れ、むくみ"},
+{k:"PC",n:"心包経",f:"手の厥陰心包経",c:9,t:"19〜21時",v:"F",path:[[72,92],[57,130],[52,170],[49,208],[45,246],[44,260]],fl:"乳頭の外側（天池）から、腕の内側の真ん中を通って、中指の先（中衝）へ",z:"胸の苦しさ、吐き気、気持ちの緊張"},
+{k:"TE",n:"三焦経",f:"手の少陽三焦経",c:23,t:"21〜23時",v:"B",path:[[46,258],[46,208],[50,160],[59,80],[86,56],[83,40],[86,28]],fl:"薬指の先（関衝）から、腕の外側の真ん中を上り、肩・首・耳のまわりを通って眉尻（糸竹空）へ",z:"耳、首・肩、体温の調節"},
+{k:"GB",n:"胆経",f:"足の少陽胆経",c:44,t:"23〜1時",v:"B",path:[[84,28],[84,40],[89,45],[77,70],[66,120],[70,200],[73,232],[69,282],[76,334],[79,400],[81,424]],fl:"目尻（瞳子髎）から、頭の横をジグザグに通り、首・肩（肩井）・体の横・お尻（環跳）・太ももとすねの外側を下りて、足の薬指の先（足竅陰）へ",z:"頭の横の頭痛、体の横の張り、イライラ"},
+{k:"LR",n:"肝経",f:"足の厥陰肝経",c:14,t:"1〜3時",v:"F",path:[[90,424],[88,414],[92,380],[94,334],[97,270],[93,236],[80,150],[76,130]],fl:"足の親指（大敦）から、足の甲・すねと太ももの内側を上り、わき腹を通って胸（期門）へ",z:"目、筋肉のこわばり、イライラ、生理"},
+{k:"GV",n:"督脈",f:"督脈",c:28,t:"",v:"B",path:[[100,232],[100,67],[100,12]],fl:"尾骨の先（長強）から背骨の真ん中を上り、頭のてっぺん（百会）を越えて、顔の真ん中を下りて上の歯ぐき（齦交）へ",z:"体の背中側（陽）の経絡をまとめる。背骨・頭"},
+{k:"CV",n:"任脈",f:"任脈",c:24,t:"",v:"F",path:[[100,238],[100,170],[100,70],[100,54]],fl:"会陰から体の前の真ん中を上り、おへそ・胸を通って下唇の下（承漿）へ",z:"体のお腹側（陰）の経絡をまとめる。お腹・婦人科"}
+];
+const KN=Object.fromEntries(K.map(x=>[x.k,x]));
+// ---------- 人の形 ----------
+const SIDE_ARM="M62,72 Q48,76 47,100 L42,160 L36,222 Q32,238 36,252 Q40,262 48,258 Q52,250 50,238 L53,224 L60,164 L66,108 Z";
+const SIDE_LEG="M64,236 L100,236 L99,252 L96,322 L94,398 Q96,412 98,420 Q92,428 78,424 Q76,412 80,400 L76,322 Q66,286 64,236 Z";
+function bodySvg(view,inner){
+  const half=`<path d="${SIDE_ARM}"/><path d="${SIDE_LEG}"/>`;
+  return `<svg viewBox="0 0 200 432" role="img" aria-label="${view==="F"?"体の前":"体の後ろ"}">
+  <g fill="var(--line)" stroke="var(--sub)" stroke-width="1" stroke-opacity=".55">
+   <ellipse cx="100" cy="31" rx="17" ry="21"/><path d="M91,49 L109,49 L111,68 L89,68 Z"/>
+   <path d="M62,72 Q100,64 138,72 Q142,100 136,130 Q130,165 128,192 Q138,212 136,240 L64,240 Q62,212 72,192 Q70,165 64,130 Q58,100 62,72 Z"/>
+   ${half}<g transform="matrix(-1,0,0,1,200,0)">${half}</g></g>
+  ${view==="B"?'<path d="M100,70 L100,232" stroke="var(--sub)" stroke-opacity=".35" stroke-dasharray="3 3"/><path d="M76,246 Q88,252 100,244 Q112,252 124,246" fill="none" stroke="var(--sub)" stroke-opacity=".35"/>':'<circle cx="100" cy="178" r="1.6" fill="var(--sub)" opacity=".5"/>'}
+  ${inner}</svg>`}
+const both=g=>`${g}<g transform="matrix(-1,0,0,1,200,0)">${g}</g>`;
+function figM(m){const g=(m.s||[]).map(p=>`<polygon points="${p}"/>`).join("")+(m.e||[]).map(e=>`<ellipse cx="${e[0]}" cy="${e[1]}" rx="${e[2]}" ry="${e[3]}"/>`).join("");
+  return figWrap([[m.v,`<g fill="#E5533D" fill-opacity=".6" stroke="#C0392B" stroke-width=".8">${both(g)}</g>`]])}
+function dot(x,y){const d=`<circle cx="${x}" cy="${y}" r="3.2" fill="#C0392B" stroke="#fff" stroke-width="1.2"/>`;return x===100?d:both(d)}
+function figP(p){return figWrap(p.pt.map(([v,x,y])=>[v,dot(x,y)]))}
+function figK(k){const pts=k.path.map(a=>a.join(",")).join(" ");const pl=`<polyline points="${pts}" fill="none" stroke="#2A7DE1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const ps=P.filter(p=>p.m===k.k).flatMap(p=>p.pt.filter(t=>t[0]===k.v).map(t=>dot(t[1],t[2]))).join("");
+  return figWrap([[k.v,(k.k==="GV"||k.k==="CV"?pl:both(pl))+ps]])}
+function figWrap(list){const by={};list.forEach(([v,g])=>{by[v]=(by[v]||"")+g});
+  return `<div class="zk-figs">${["F","B"].filter(v=>by[v]!=null).map(v=>`<figure>${bodySvg(v,by[v])}<figcaption>${v==="F"?"前から":"後ろから"}</figcaption></figure>`).join("")}</div>`}
+// ---------- 画面 ----------
+let tab="m",regs=[],q="",fromTxt="",open=null;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const kana=s=>String(s||"").replace(/[ァ-ン]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60)).toLowerCase();
+function renderChips(){const c=$z("zkChips");if(tab==="k"){c.innerHTML="";return}
+  c.innerHTML=`<button data-r="" class="${regs.length?"":"on"}">すべて</button>`+REG.map(([k,n])=>`<button data-r="${k}" class="${regs.includes(k)?"on":""}">${n}</button>`).join("")}
+function items(){const src=tab==="m"?M:tab==="p"?P:K;const qq=kana(q.trim());
+  return src.filter(x=>(tab==="k"||!regs.length||x.r.some(r=>regs.includes(r)))&&(!qq||kana(x.n).includes(qq)||kana(x.y||"").includes(qq)||kana(x.f||"").includes(qq)||String(x.c||"").toLowerCase().includes(qq)))}
+function relBtns(list,t){return list.length?`<div class="zk-rel">${list.map(n=>`<button data-go="${t}|${esc(n)}">${esc(n)}</button>`).join("")}</div>`:""}
+function detail(x){
+  if(tab==="m"){const near=P.filter(p=>p.r.some(r=>x.r.includes(r))).map(p=>p.n);
+    return figM(x)+`<dl><dt>どこからどこへ</dt><dd>${esc(x.o)}</dd><dt>働き</dt><dd>${esc(x.w)}</dd><dt>施術のポイント</dt><dd>${esc(x.p)}</dd><dt>同じ部位の経穴</dt><dd>${relBtns(near,"p")}</dd></dl>`}
+  if(tab==="p"){const k=KN[x.m];
+    return figP(x)+`<dl><dt>場所</dt><dd>${esc(x.l)}</dd><dt>伝統的に言われる効果</dt><dd>${esc(x.f)}</dd>${k?`<dt>経絡</dt><dd>${relBtns([k.n],"k")}</dd>`:`<dt>経絡</dt><dd>奇穴（経絡に属さないツボ）</dd>`}</dl>${x.x?`<div class="zk-warn">⚠ ${esc(x.x)}</div>`:""}`}
+  const ps=P.filter(p=>p.m===x.k).map(p=>p.n);
+  return figK(x)+`<dl><dt>流れ</dt><dd>${esc(x.fl)}</dd><dt>ツボの数</dt><dd>${x.c}穴${x.t?`・流注の時間 ${x.t}`:""}</dd><dt>関係が深いこと</dt><dd>${esc(x.z)}</dd><dt>この図鑑にある、この経絡のツボ</dt><dd>${ps.length?relBtns(ps,"p"):"なし"}</dd></dl>`}
+function render(){
+  document.querySelectorAll("#zkTabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));renderChips();
+  const f=$z("zkFrom");f.hidden=!fromTxt;f.textContent=fromTxt;
+  const list=items();
+  $z("zkList").innerHTML=(list.length?list.map(x=>{const id=x.n;const on=open===id;
+    const sub=tab==="k"?x.f:x.y;const code=tab==="m"?x.r.map(r=>REGN[r]).join("・"):tab==="p"?x.c+(x.m&&KN[x.m]?"・"+KN[x.m].n:""):x.k;
+    return `<div class="zk-item"><div class="zk-sum" data-id="${esc(id)}"><b>${esc(x.n)}</b><small>${esc(sub||"")}</small><span class="zk-code">${esc(code)} ${on?"▲":"▼"}</span></div>${on?`<div class="zk-det">${detail(x)}</div>`:""}</div>`}).join(""):`<div class="zk-empty">見つかりませんでした。</div>`)
+  +`<p class="zk-note">図の位置は目安です。ツボの効果は、東洋医学で伝統的に言われているものです。お客様に伝えるときは「治る」など医療のような言い方は避け、「〜に良いと言われています」くらいにしておくと安心です。</p>`}
+function show(){const was=!$z("zukan").hidden;$z("zukan").hidden=false;document.body.style.overflow="hidden";render();$z("zukan").scrollTop=0;
+  if(!was)try{history.pushState({zk:1},"")}catch(e){}}
+function close_(){$z("zukan").hidden=true;document.body.style.overflow=""}
+// スマホの「戻る」でも図鑑だけ閉じる
+function hide(){if(history.state&&history.state.zk)history.back();else close_()}
+window.addEventListener("popstate",()=>{if(!$z("zukan").hidden)close_()});
+window.openZukan=function(r,from){tab="m";regs=r||[];q="";$z("zkQ").value="";open=null;fromTxt=from||"";show()};
+$z("zkBack").addEventListener("click",hide);
+$z("zkTabs").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;tab=b.dataset.t;open=null;render()});
+$z("zkChips").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const r=b.dataset.r;
+  if(!r)regs=[];else regs=regs.includes(r)?regs.filter(x=>x!==r):regs.concat(r);fromTxt="";open=null;render()});
+$z("zkQ").addEventListener("input",e=>{q=e.target.value;open=null;render()});
+$z("zkList").addEventListener("click",e=>{const g=e.target.closest("[data-go]");
+  if(g){const [t,n]=g.dataset.go.split("|");tab=t;regs=[];q="";$z("zkQ").value="";fromTxt="";open=t==="k"?n:n;render();
+    const el=[...document.querySelectorAll("#zkList .zk-sum")].find(s=>s.dataset.id===n);if(el)el.scrollIntoView({block:"start"});return}
+  const s=e.target.closest(".zk-sum");if(!s)return;open=open===s.dataset.id?null:s.dataset.id;render();
+  const el=[...document.querySelectorAll("#zkList .zk-sum")].find(x=>x.dataset.id===open);if(el){const h=document.querySelector("#zukan .zk-head").offsetHeight;$z("zukan").scrollTop=el.parentNode.offsetTop-h-6}});
+// 上のボタン（電卓の左）
+const gear=document.getElementById("gearBtn");
+if(gear){const b=document.createElement("button");b.className="calc-btn zk-btn";b.id="zkBtn";b.setAttribute("aria-label","からだ図鑑");b.textContent="📖";gear.parentNode.insertBefore(b,document.getElementById("calcBtn")||gear);
+  b.addEventListener("click",()=>openZukan([],""))}
+// 記録の詳細に「お疲れ部位」があれば、図鑑へのボタンを出す
+function areaRegs(txt){const m=String(txt).match(/お疲れ部位：([^\n]*)/);if(!m)return null;
+  const words=m[1].split(/[、,，]/).map(w=>w.trim().replace(/^[右左]/,"")).filter(Boolean);const out=[];
+  words.forEach(w=>{const k=Object.keys(AREA2REG).find(a=>w.includes(a));if(k&&!out.includes(AREA2REG[k]))out.push(AREA2REG[k])});return out.length?out:null}
+function addLink(){const sh=document.getElementById("sheet");if(!sh||sh.hidden)return;
+  const memo=sh.querySelector(".memo");if(!memo||memo.parentNode.querySelector(".zk-link"))return;
+  const r=areaRegs(memo.textContent);if(!r)return;const names=r.map(k=>REGN[k]).join("・");
+  const d=document.createElement("div");d.className="zk-link";d.innerHTML=`<button type="button">📖 からだ図鑑で見る（${esc(names)}）</button>`;
+  d.querySelector("button").addEventListener("click",()=>openZukan(r,"この記録のお疲れ部位："+names+"（下の部位を押すと変えられます）"));
+  memo.parentNode.appendChild(d)}
+const sh=document.getElementById("sheet");
+if(sh)new MutationObserver(()=>setTimeout(addLink,0)).observe(sh,{attributes:true,childList:true,subtree:true});
+// 戻るボタン（Android）で図鑑を閉じる
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$z("zukan").hidden)hide()});
+})();
+</script>
+
 </body>
 </html>
